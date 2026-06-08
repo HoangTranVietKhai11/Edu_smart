@@ -4,6 +4,10 @@ const { getExams, getExam, createExam, updateExam, deleteExam, addQuestion, upda
 const { protect, authorize } = require('../middleware/auth');
 const { uploadDocument } = require('../middleware/upload');
 
+router.get('/debug-env', (req, res) => {
+  res.json({ AI_SERVICE_URL: process.env.AI_SERVICE_URL || 'NOT SET' });
+});
+
 router.get('/', protect, getExams);
 router.post('/', protect, authorize('teacher'), createExam);
 router.get('/:id', protect, getExam);

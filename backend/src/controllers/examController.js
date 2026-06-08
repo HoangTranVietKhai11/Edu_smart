@@ -267,7 +267,8 @@ exports.extractQuestionsFromFile = async (req, res) => {
     const form = new FormData();
     form.append('file', fs.createReadStream(actualFilePath));
 
-    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    let AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    if (AI_SERVICE_URL.endsWith('/')) AI_SERVICE_URL = AI_SERVICE_URL.slice(0, -1);
     
     // Call AI Service
     const response = await axios.post(`${AI_SERVICE_URL}/extract/extract-exam`, form, {
@@ -305,6 +306,12 @@ exports.extractQuestionsFromFile = async (req, res) => {
 
   } catch (error) {
     console.error('Extract file error:', error.message);
+    if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+      return res.status(500).json({ success: false, message: 'Lỗi kết nối: Backend chưa liên kết được với AI Service. Bạn đã điền AI_SERVICE_URL trên Render chưa?' });
+    }
+    if (error.response && error.response.status === 404) {
+      return res.status(500).json({ success: false, message: 'Lỗi 404: Không tìm thấy đường dẫn AI Service. Hãy chắc chắn AI_SERVICE_URL không có dấu / ở cuối.' });
+    }
     res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi phân tích file. AI có thể đang quá tải hoặc file không đúng định dạng.' });
   }
 };
@@ -329,7 +336,8 @@ exports.extractQuestionsOnly = async (req, res) => {
     const form = new FormData();
     form.append('file', fs.createReadStream(actualFilePath));
 
-    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    let AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    if (AI_SERVICE_URL.endsWith('/')) AI_SERVICE_URL = AI_SERVICE_URL.slice(0, -1);
     
     const response = await axios.post(`${AI_SERVICE_URL}/extract/extract-exam`, form, {
       headers: form.getHeaders(),
@@ -344,6 +352,12 @@ exports.extractQuestionsOnly = async (req, res) => {
     res.json({ success: true, data: questionsData, message: `Đã trích xuất ${questionsData.length} câu hỏi.` });
   } catch (error) {
     console.error('Extract only error:', error.message);
-    res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi phân tích file bằng AI.' });
+    if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+      return res.status(500).json({ success: false, message: 'Lỗi kết nối: Backend chưa liên kết được với AI Service. Bạn đã điền đúng AI_SERVICE_URL trên Render chưa?' });
+    }
+    if (error.response && error.response.status === 404) {
+      return res.status(500).json({ success: false, message: 'Lỗi 404: Không tìm thấy đường dẫn AI Service. Hãy chắc chắn AI_SERVICE_URL không có dấu / ở cuối.' });
+    }
+    res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi phân tích file bằng AI. Chi tiết: ' + (error.response?.data?.detail || error.message) });
   }
 };
