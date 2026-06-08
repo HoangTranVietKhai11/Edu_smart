@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { 
   Title, Text, Group, Button, Paper, SimpleGrid, ThemeIcon, 
-  Badge, ActionIcon, Menu, Box, Skeleton
+  Badge, ActionIcon, Menu, Box, Skeleton, Tooltip
 } from '@mantine/core';
 import { 
   FileText, Plus, MoreVertical, Trash, Edit, Clock, Calendar, AlertCircle
@@ -89,20 +89,6 @@ export default function ExamManagerPage() {
                 <Box p="md" style={{ flex: 1 }}>
                   <Group justify="space-between" align="flex-start" mb="sm">
                     <Badge color={status.color} variant="light">{status.text}</Badge>
-                    
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Menu position="bottom-end" shadow="sm">
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray">
-                            <MoreVertical size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item component={Link} to={`/teacher/exams/${exam._id}/edit`} leftSection={<Edit size={14} />}>Chỉnh sửa</Menu.Item>
-                          <Menu.Item color="red" leftSection={<Trash size={14} />} onClick={() => handleDelete(exam._id)}>Xóa bài kiểm tra</Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </div>
                   </Group>
                   
                   <Title order={4} className="text-slate-800" lineClamp={2} title={exam.title}>{exam.title}</Title>
@@ -129,16 +115,28 @@ export default function ExamManagerPage() {
                     <Text size="xs" fw={500} c="dimmed">
                       Tổng điểm: {exam.totalPoints} (Đạt: {exam.passingScore})
                     </Text>
-                    <Button 
-                      component={Link} 
-                      to={`/teacher/exams/${exam._id}/results`}
-                      variant="subtle" 
-                      color="blue" 
-                      size="xs"
-                      compact
-                    >
-                      Xem kết quả →
-                    </Button>
+                    <Group gap="xs">
+                      <Tooltip label="Chỉnh sửa bài kiểm tra">
+                        <ActionIcon component={Link} to={`/teacher/exams/${exam._id}/edit`} variant="light" color="blue" size="md" radius="md">
+                          <Edit size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Xóa bài kiểm tra">
+                        <ActionIcon onClick={() => handleDelete(exam._id)} variant="light" color="red" size="md" radius="md">
+                          <Trash size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Button 
+                        component={Link} 
+                        to={`/teacher/exams/${exam._id}/results`}
+                        variant="light" 
+                        color="violet" 
+                        size="xs"
+                        radius="md"
+                      >
+                        Kết quả →
+                      </Button>
+                    </Group>
                   </Group>
                 </Box>
               </Paper>
