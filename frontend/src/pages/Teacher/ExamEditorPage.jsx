@@ -33,11 +33,16 @@ export default function ExamEditorPage() {
     if (isEditMode) {
       examAPI.getOne(id).then(res => {
         const data = res.data;
+        const oDate = new Date(data.openAt);
+        oDate.setMinutes(oDate.getMinutes() - oDate.getTimezoneOffset());
+        const cDate = new Date(data.closeAt);
+        cDate.setMinutes(cDate.getMinutes() - cDate.getTimezoneOffset());
+
         setExam({
           ...data,
           class: data.class?._id || data.class,
-          openAt: new Date(data.openAt).toISOString().slice(0, 16),
-          closeAt: new Date(data.closeAt).toISOString().slice(0, 16),
+          openAt: oDate.toISOString().slice(0, 16),
+          closeAt: cDate.toISOString().slice(0, 16),
         });
       }).catch(() => {
         toast.error('Không tìm thấy bài kiểm tra');
@@ -50,11 +55,17 @@ export default function ExamEditorPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        ...exam,
+        openAt: new Date(exam.openAt).toISOString(),
+        closeAt: new Date(exam.closeAt).toISOString()
+      };
+      
       if (isEditMode) {
-        await examAPI.update(id, exam);
+        await examAPI.update(id, payload);
         toast.success('Cập nhật thành công');
       } else {
-        const res = await examAPI.create(exam);
+        const res = await examAPI.create(payload);
         toast.success('Tạo bài kiểm tra thành công');
         navigate(`/teacher/exams/${res.data._id}/edit`);
       }
