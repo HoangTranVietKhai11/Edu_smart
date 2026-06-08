@@ -84,10 +84,26 @@ export default function ExamEditorPage() {
 
   const handleSaveQuestion = async (e) => {
     e.preventDefault();
-    // Validate options
     if (currentQ.type === 'multiple-choice') {
       const hasCorrect = currentQ.options.some(o => o.isCorrect);
       if (!hasCorrect) return toast.error('Vui lòng chọn ít nhất 1 đáp án đúng');
+    }
+
+    if (!isEditMode) {
+      setExam(prev => {
+        const newQs = [...(prev.questions || [])];
+        if (currentQ._id || currentQ._localId) {
+          const idx = newQs.findIndex(q => (q._id && q._id === currentQ._id) || (q._localId && q._localId === currentQ._localId));
+          if (idx >= 0) newQs[idx] = { ...currentQ };
+          else newQs.push({ ...currentQ, _localId: Date.now() });
+        } else {
+          newQs.push({ ...currentQ, _localId: Date.now() });
+        }
+        return { ...prev, questions: newQs };
+      });
+      setShowQModal(false);
+      toast.success('Đã thêm câu hỏi (nháp)');
+      return;
     }
 
     setSavingQ(true);
@@ -99,8 +115,6 @@ export default function ExamEditorPage() {
         await examAPI.addQuestion(id, currentQ);
         toast.success('Đã thêm câu hỏi');
       }
-      
-      // Refresh exam data
       const res = await examAPI.getOne(id);
       setExam(prev => ({ ...prev, questions: res.data.questions }));
       setShowQModal(false);
@@ -111,8 +125,21 @@ export default function ExamEditorPage() {
     }
   };
 
-  const handleDeleteQuestion = async (qId) => {
+  const handleDeleteQuestion = async (qId, localId = null) => {
     if (!window.confirm('Bạn có chắc muốn xóa câu hỏi này?')) return;
+    
+    if (!isEditMode) {
+      setExam(prev => ({
+        ...prev,
+        questions: prev.questions.filter(q => {
+          if (qId) return q._id !== qId;
+          return q._localId !== localId;
+        })
+      }));
+      toast.success('Đã xóa câu hỏi (nháp)');
+      return;
+    }
+
     try {
       await examAPI.deleteQuestion(id, qId);
       setExam(prev => ({
@@ -140,12 +167,16 @@ export default function ExamEditorPage() {
       const formData = new FormData();
       formData.append('file', file);
       
-      const res = await examAPI.extractFromFile(id, formData);
-      toast.success(res.message || 'Trích xuất thành công!', { id: loadingToast });
-      
-      // Refresh exam data
-      const updatedExam = await examAPI.getOne(id);
-      setExam(prev => ({ ...prev, questions: updatedExam.data.questions }));
+      if (isEditMode) {
+        const res = await examAPI.extractFromFile(id, formData);
+        toast.success(res.message || 'Trích xuất thành công!', { id: loadingToast });
+        const updatedExam = await examAPI.getOne(id);
+        setExam(prev => ({ ...prev, questions: updatedExam.data.questions }));
+      } else {
+        const res = await examAPI.extractQuestionsOnly(formData);
+        toast.success(res.message || 'Trích xuất thành công!', { id: loadingToast });
+        setExam(prev => ({ ...prev, questions: [...(prev.questions || []), ...res.data] }));
+      }
     } catch (err) {
       toast.error(err.message || 'Lỗi khi phân tích file', { id: loadingToast });
     } finally {
@@ -221,10 +252,9 @@ export default function ExamEditorPage() {
         </form>
       </div>
 
-      {isEditMode && (
-        <div className="card">
-          <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="font-bold text-slate-700 text-lg">Câu hỏi ({exam.questions?.length || 0})</h2>
+      <div className="card">
+        <div className="flex justify-between items-center mb-4 border-b pb-2">
+          <h2 className="font-bold text-slate-700 text-lg">Câu hỏi ({exam.questions?.length || 0})</h2>
             <div className="flex gap-2">
               <div>
                 <input 
@@ -248,12 +278,12 @@ export default function ExamEditorPage() {
           ) : (
             <div className="space-y-4">
               {exam.questions?.map((q, idx) => (
-                <div key={q._id} className="p-4 border rounded-xl hover:border-primary-300 transition-colors">
+                <div key={q._id || q._localId || idx} className="p-4 border rounded-xl hover:border-primary-300 transition-colors">
                   <div className="flex justify-between items-start gap-4 mb-3">
                     <p className="font-bold text-slate-800 flex-1"><span className="text-primary-600 mr-2">Câu {idx + 1}:</span> {q.content}</p>
                     <div className="flex gap-2">
                       <button onClick={() => openQuestionModal(q)} className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg text-sm">Sửa</button>
-                      <button onClick={() => handleDeleteQuestion(q._id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg text-sm">Xóa</button>
+                      <button onClick={() => handleDeleteQuestion(q._id, q._localId)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg text-sm">Xóa</button>
                     </div>
                   </div>
                   {q.type === 'multiple-choice' && (
@@ -275,8 +305,6 @@ export default function ExamEditorPage() {
             </div>
           )}
         </div>
-      )}
-
       {/* Question Modal */}
       {showQModal && currentQ && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 overflow-y-auto">

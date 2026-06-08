@@ -116,6 +116,9 @@ export const examAPI = {
   extractFromFile: (examId, formData) => API.post(`/exams/${examId}/extract-from-file`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  extractQuestionsOnly: (formData) => API.post(`/exams/extract`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // Dashboard

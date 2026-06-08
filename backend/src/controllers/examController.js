@@ -79,7 +79,27 @@ exports.getExam = async (req, res) => {
 // @access Private/Teacher
 exports.createExam = async (req, res) => {
   req.body.createdBy = req.user._id;
-  const exam = await Exam.create(req.body);
+  const { questions, ...examData } = req.body;
+  const exam = await Exam.create(examData);
+
+  if (questions && questions.length > 0) {
+    const createdQuestions = [];
+    for (const qData of questions) {
+      const q = await Question.create({
+        exam: exam._id,
+        createdBy: req.user._id,
+        content: qData.content,
+        type: qData.type || 'multiple-choice',
+        points: qData.points || 1,
+        explanation: qData.explanation || '',
+        options: qData.options || [],
+      });
+      createdQuestions.push(q._id);
+    }
+    exam.questions = createdQuestions;
+    await exam.save();
+  }
+
   res.status(201).json({ success: true, data: exam });
 };
 
@@ -286,5 +306,44 @@ exports.extractQuestionsFromFile = async (req, res) => {
   } catch (error) {
     console.error('Extract file error:', error.message);
     res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi phân tích file. AI có thể đang quá tải hoặc file không đúng định dạng.' });
+  }
+};
+
+// @desc   Extract questions from file (Without saving to DB)
+// @route  POST /api/exams/extract
+// @access Private/Teacher
+exports.extractQuestionsOnly = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Vui lòng tải lên file Word hoặc PDF.' });
+  }
+
+  try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    const axios = require('axios');
+    const path = require('path');
+
+    const filePath = path.join(__dirname, '../', `/uploads/docs/${req.file.filename}`);
+    const actualFilePath = fs.existsSync(filePath) ? filePath : req.file.path;
+
+    const form = new FormData();
+    form.append('file', fs.createReadStream(actualFilePath));
+
+    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    
+    const response = await axios.post(`${AI_SERVICE_URL}/extract/extract-exam`, form, {
+      headers: form.getHeaders(),
+      timeout: 60000 
+    });
+
+    const questionsData = response.data.data;
+    if (!questionsData || questionsData.length === 0) {
+      return res.status(400).json({ success: false, message: 'Không tìm thấy câu hỏi nào trong file.' });
+    }
+
+    res.json({ success: true, data: questionsData, message: `Đã trích xuất ${questionsData.length} câu hỏi.` });
+  } catch (error) {
+    console.error('Extract only error:', error.message);
+    res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi phân tích file bằng AI.' });
   }
 };
