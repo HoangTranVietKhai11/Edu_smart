@@ -1,0 +1,47 @@
+services:
+  # 1. Backend Web Service
+  - type: web
+    name: edusmart-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # Set manually in Render Dashboard to MongoDB Atlas URI
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://edusmart-frontend.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://edusmart-ai.onrender.com # If you choose to host AI service, else it will fail gracefully
+
+  # 2. Frontend Static Site
+  - type: web
+    name: edusmart-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://edusmart-backend.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # 3. AI Service (Optional - consumes Render free hours)
+  - type: web
+    name: edusmart-ai
+    env: python
+    rootDir: ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: GROQ_API_KEY
+        sync: false # Set manually in Render Dashboard
