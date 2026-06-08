@@ -71,12 +71,14 @@ function AppRoutes() {
     <>
       {isAuthenticated && user?.isFirstLogin && <TutorialOverlay />}
       <Routes>
-        {/* Public routes */}
+        {/* Public routes with layout */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         </Route>
+
+        {/* Auth routes - standalone, no MainLayout/AppShell */}
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
         {/* Teacher routes */}
         <Route element={<PrivateRoute role="teacher"><TeacherLayout /></PrivateRoute>}>
