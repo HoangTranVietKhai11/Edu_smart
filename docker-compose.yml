@@ -1,0 +1,108 @@
+services:
+  # ============ MongoDB ============
+  mongodb:
+    image: mongo:7.0
+    container_name: edusmart_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: edusmart2024
+      MONGO_INITDB_DATABASE: edusmart
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - edusmart_network
+
+  # ============ Backend (NodeJS) ============
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edusmart_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:edusmart2024@mongodb:27017/edusmart?authSource=admin
+      AI_SERVICE_URL: http://ai-service:8000
+      FRONTEND_URL: http://localhost:3000
+    volumes:
+      - uploads_data:/app/src/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - edusmart_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ============ AI Service (Python) ============
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: edusmart_ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai-service/.env
+    environment:
+      CHROMA_PERSIST_DIR: /app/chroma_db
+    volumes:
+      - chroma_data:/app/chroma_db
+      - uploads_data:/app/uploads:ro
+    networks:
+      - edusmart_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ============ Frontend (React + Nginx) ============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5000
+    container_name: edusmart_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - edusmart_network
+
+# ============ Volumes ============
+volumes:
+  mongodb_data:
+    driver: local
+  uploads_data:
+    driver: local
+  chroma_data:
+    driver: local
+
+# ============ Networks ============
+networks:
+  edusmart_network:
+    driver: bridge
