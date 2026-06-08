@@ -25,7 +25,6 @@ const examRoutes = require('./routes/exams');
 const dashboardRoutes = require('./routes/dashboard');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
-const setupRoutes = require('./routes/setup'); // TEMPORARY - REMOVE AFTER USE
 
 const app = express();
 const httpServer = createServer(app);
@@ -70,7 +69,6 @@ app.use('/api/exams', examRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/setup', setupRoutes); // TEMPORARY - REMOVE AFTER USE
 
 // Health check
 app.get('/api/health', (req, res) => {
