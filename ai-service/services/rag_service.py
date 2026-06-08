@@ -1,7 +1,7 @@
 import os
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+from chromadb.utils import embedding_functions
 import fitz  # PyMuPDF
 from docx import Document as DocxDocument
 from pptx import Presentation
@@ -22,9 +22,8 @@ collection = chroma_client.get_or_create_collection(
     metadata={"hnsw:space": "cosine"},
 )
 
-# Initialize embedding model
-print(f"Loading embedding model: {EMBEDDING_MODEL}")
-embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+print(f"Loading embedding model: ONNX Default")
+embedding_model = embedding_functions.DefaultEmbeddingFunction()
 
 
 def extract_text_from_pdf(file_path: str) -> str:
@@ -105,8 +104,7 @@ def embed_document(document_id: str, file_path: str, file_type: str, metadata: D
     if not chunks:
         raise ValueError("No text chunks generated")
 
-    # Generate embeddings
-    embeddings = embedding_model.encode(chunks, show_progress_bar=False).tolist()
+    embeddings = embedding_model(chunks)
 
     # Store in ChromaDB
     vector_ids = [f"{document_id}_chunk_{i}" for i in range(len(chunks))]
@@ -136,7 +134,7 @@ def retrieve_context(query: str, class_id: str = None, n_results: int = 5) -> Li
     Semantic retrieval from ChromaDB.
     Returns list of relevant chunks with metadata.
     """
-    query_embedding = embedding_model.encode([query]).tolist()
+    query_embedding = embedding_model([query])
 
     where_filter = {}
     if class_id:
