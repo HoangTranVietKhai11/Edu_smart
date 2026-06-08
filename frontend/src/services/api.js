@@ -22,7 +22,8 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Dispatch event instead of window.location.href to avoid full page reload
+      window.dispatchEvent(new CustomEvent('auth:logout'));
     }
     return Promise.reject(error.response?.data || error);
   }

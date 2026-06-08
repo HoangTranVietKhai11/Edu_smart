@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -8,6 +9,18 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const navigate = useNavigate();
+
+  // Listen for 401 auth:logout events from API interceptor
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      setToken(null);
+      setUser(null);
+      navigate('/login', { replace: true });
+    };
+    window.addEventListener('auth:logout', handleAuthLogout);
+    return () => window.removeEventListener('auth:logout', handleAuthLogout);
+  }, [navigate]);
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -53,8 +66,8 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     toast.success('Đã đăng xuất.');
-    window.location.href = '/';
-  }, []);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);
