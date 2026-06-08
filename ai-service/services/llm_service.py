@@ -38,7 +38,7 @@ def get_groq_response(messages: list, system_prompt: str = None, json_mode: bool
         kwargs = {
             "model": MODEL,
             "messages": formatted_messages,
-            "max_tokens": int(os.getenv("MAX_TOKENS", 2048)),
+            "max_tokens": int(os.getenv("MAX_TOKENS", 4096)),
             "temperature": float(os.getenv("TEMPERATURE", 0.7)),
         }
         if json_mode:
