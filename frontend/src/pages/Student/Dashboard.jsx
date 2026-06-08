@@ -48,7 +48,7 @@ export default function StudentDashboard() {
       queryClient.invalidateQueries({ queryKey: ['studentDashboard'] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Lỗi khi tham gia lớp học');
+      toast.error(err.message || 'Lỗi khi tham gia lớp học');
     }
   });
 

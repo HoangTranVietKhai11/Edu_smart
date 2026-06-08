@@ -5,7 +5,7 @@ const { protect, authorize } = require('../middleware/auth');
 
 router.get('/', protect, getClasses);
 router.post('/', protect, authorize('teacher'), createClass);
-router.post('/join', protect, authorize('student'), joinClass);
+router.post('/join', protect, authorize('student', 'admin'), joinClass);
 router.get('/:id', protect, getClass);
 router.put('/:id', protect, authorize('teacher'), updateClass);
 router.delete('/:id', protect, authorize('teacher'), deleteClass);
