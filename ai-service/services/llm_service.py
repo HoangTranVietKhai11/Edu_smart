@@ -28,22 +28,29 @@ KHI GIẢI BÀI TẬP:
 Hãy là người thầy kiên nhẫn, thân thiện và khuyến khích học sinh!"""
 
 
-def get_groq_response(messages: list, system_prompt: str = None) -> str:
+def get_groq_response(messages: list, system_prompt: str = None, json_mode: bool = False) -> str:
     """Call Groq API and return text response."""
     try:
         formatted_messages = [
             {"role": "system", "content": system_prompt or SYSTEM_PROMPT}
         ] + messages
 
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=formatted_messages,
-            max_tokens=int(os.getenv("MAX_TOKENS", 2048)),
-            temperature=float(os.getenv("TEMPERATURE", 0.7)),
-        )
+        kwargs = {
+            "model": MODEL,
+            "messages": formatted_messages,
+            "max_tokens": int(os.getenv("MAX_TOKENS", 2048)),
+            "temperature": float(os.getenv("TEMPERATURE", 0.7)),
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        response = client.chat.completions.create(**kwargs)
         return response.choices[0].message.content
     except Exception as e:
         print(f"Groq API error: {e}")
+        # If it's json mode, return an empty json array to fail gracefully or let it be caught
+        if json_mode:
+            raise e
         return "Xin lỗi, có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại."
 
 

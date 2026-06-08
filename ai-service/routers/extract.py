@@ -81,19 +81,23 @@ async def extract_exam(file: UploadFile = File(...)):
 
     # Bước 2: Gọi LLM để bóc tách JSON
     try:
+        import re
         messages = [{"role": "user", "content": f"Văn bản trích xuất từ đề thi:\n\n{text}"}]
-        llm_response = get_groq_response(messages, EXTRACT_SYSTEM_PROMPT)
+        llm_response = get_groq_response(messages, EXTRACT_SYSTEM_PROMPT, json_mode=True)
         
-        # Làm sạch JSON (bỏ markdown tags nếu AI lỡ sinh ra)
+        # Làm sạch JSON an toàn hơn
         cleaned_json_str = llm_response.strip()
-        if cleaned_json_str.startswith("```json"):
-            cleaned_json_str = cleaned_json_str[7:]
-        if cleaned_json_str.startswith("```"):
-            cleaned_json_str = cleaned_json_str[3:]
-        if cleaned_json_str.endswith("```"):
-            cleaned_json_str = cleaned_json_str[:-3]
-            
-        cleaned_json_str = cleaned_json_str.strip()
+        
+        # Tìm block json nếu bị bọc trong markdown
+        match = re.search(r'```(?:json)?\s*(.*?)\s*```', cleaned_json_str, re.DOTALL)
+        if match:
+            cleaned_json_str = match.group(1).strip()
+        else:
+            # Tìm cặp ngoặc nhọn đầu và cuối
+            start = cleaned_json_str.find('{')
+            end = cleaned_json_str.rfind('}')
+            if start != -1 and end != -1 and end >= start:
+                cleaned_json_str = cleaned_json_str[start:end+1]
         
         # Parse JSON
         parsed_data = json.loads(cleaned_json_str)
