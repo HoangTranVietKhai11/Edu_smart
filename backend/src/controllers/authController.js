@@ -25,7 +25,8 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @route  POST /api/auth/register
 // @access Public
 exports.register = async (req, res) => {
-  const { name, email, password, phone, school, grade } = req.body;
+  const { name, password, phone, school, grade } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -49,7 +50,8 @@ exports.register = async (req, res) => {
 // @route  POST /api/auth/login
 // @access Public
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
+  const password = req.body.password;
 
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu.' });

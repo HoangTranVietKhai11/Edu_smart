@@ -25,7 +25,8 @@ exports.getUsers = async (req, res) => {
 // @access Private/Admin
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, password, role } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
 
     const userExists = await User.findOne({ email });
     if (userExists) {
